@@ -1,0 +1,248 @@
+---
+title: "HW1"
+author: "Ali Ozan Memetoğlu"
+date: "11/20/2020"
+output: html_document
+---
+#   Data Visualization with Google Trends
+##  1) Daily Total Number of Covid Cases in Turkey 
+
+  This data originally consists of the number daily covid cases in all countries. So daily total number of covid cases is chosen as the measure. Thanks to the fread(), data is easily read, and required columns are selected fast. Since we are dealing with data from Turkey, the table is filtered at first. Monthly grouping is applied. And also the data goes from the Twelfth of March to the Eleventh of November, so it might be required to truncate for a more reliable visualization later on.
+Similar date filtering and graphs are used on  other datasets too.
+  
+**Setup Stage:**
+```{r setup, message = FALSE}
+
+library('data.table', quietly = TRUE)
+library('ggplot2', quietly = TRUE)
+library('dplyr')
+library('lubridate', quietly = TRUE)
+
+setwd('/Users/aliozan.memetoglu/Documents/GitHub/fall20-aliozanmemeto/files')
+covid_data <- fread("owid-covid-data.csv", 
+              select = c("location", "total_cases", "date"))[location == ('Turkey')]
+
+# Data is from https://github.com/owid/covid-19-data/tree/master/public/data
+```
+  Because the location column is not needed anymore, it is removed. A function 'fancy scientific' is defined for visual purposes in graph breaks. 
+
+```{r manipulations, message = FALSE}
+covid_data[,location:=NULL]
+
+fancy_scientific <- function(l) {
+  # turn in to character string in scientific notation
+  l <- format(l, scientific = TRUE)
+  # quote the part before the exponent to keep all the digits
+  l <- gsub("^(.*)e", "'\\1'e", l)
+  # turn the 'e+' into plotmath format
+  l <- gsub("e", "%*%10^", l)
+  # return this as an expression
+  parse(text=l)
+}
+
+
+```
+
+First a quick and dirty line graph which indicates there is an increasing trend
+
+```{r linegraph, message = FALSE}
+ggplot(covid_data, aes(x=date, y=total_cases)) + geom_line() +
+  labs(title = "Total covid cases in Turkey", 
+       x = "Date",
+       y = "# of cases") +
+  scale_x_date(date_breaks = "1 month") +
+  scale_y_continuous(labels=fancy_scientific) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+In the next step, the data in March and November is removed initially. Then monthly histograms are provided to check if the shape of histogram is changing significantly over the months between 4th to 10th. Unfortunately there are not any consistent shapes we see every month.
+
+```{r histograms, message = FALSE, fig.width=18}
+monthly_plot = covid_data[month(date)!=3 & month(date)!= 11]
+ggplot(monthly_plot, aes(x=total_cases)) +
+  geom_histogram(aes(y=..density..), colour="lightgreen",fill='white', binwidth = 10000)+ 
+  geom_density(alpha=.4, fill="#FF6666") +
+  labs(title = "Histograms of the Total Number of Covid Cases in Every Month", 
+       x = "Covid Cases",
+       y = "Frequency") + scale_x_continuous(labels=fancy_scientific)+ scale_y_continuous(labels=fancy_scientific)   +
+  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  facet_grid(~month(date))
+```
+
+As for box-plots with respect to months, which are pretty similar to the line graph above, we can make an inference about the daily means and variances of months.
+
+```{r , message = FALSE}
+ggplot(monthly_plot, aes(x= as.factor(month(date)), y = total_cases, fill=as.factor(month(date)))) +
+  geom_boxplot(aes(group = month(date))) +
+  labs(title = "Daily Data Boxplots of the Total Number of Covid Cases in Every Month", 
+       x = "Months",
+       y = "Total Cases") + 
+  theme(legend.position="none") + scale_y_continuous(labels=fancy_scientific) +
+  scale_fill_brewer(palette="Dark2")
+```
+
+Google trend data for the search "korona belirtisi" is read and filtered for those months accordingly.
+
+```{r , message = FALSE}
+korona_belirtisi <- fread("multiTimeline.csv", select = c("Week", "korona belirtisi: (Turkey)"))
+setnames(korona_belirtisi, "korona belirtisi: (Turkey)", "interest")
+setnames(korona_belirtisi, "Week", "week")
+
+print(min(as.Date(covid_data$date)))
+print(max(as.Date(covid_data$date)))
+
+
+korona_belirtisi <- korona_belirtisi[week >= ymd('20200401') & week < ymd('20201101')]
+```
+
+The range of boxplot is different in this case, probably due to the fact that this data contains the interest for "korona belirtisi" on a **weekly** basis.
+
+```{r , message = FALSE}
+ggplot(korona_belirtisi, aes(x= as.factor(month(week)), y = interest, fill=as.factor(month(week)))) +
+  geom_boxplot(aes(group = month(week))) +
+  labs(title = "Weekly Data Boxplots of the Interest over Search Term - korona belirtisi in Every Month", 
+       x = "Months",
+       y = "the Interest over Search Term - korona belirtisi") + 
+  theme(legend.position="none")  +
+  scale_fill_brewer(palette="Dark2")
+```
+
+To sum up, whilst the covid data follows an increasing fashion, search term - korona belirtisi seems more like a stationary data with a visual inspection.
+
+##  2) Apple Stock Prices
+
+In this visualization, I wanted to use daily closing stock price of apple.
+
+**Setup Stage:**
+```{r , message = FALSE}
+apple_stock_closing <- fread("AAPL.csv", 
+                             select = c("Date", "Close"))[Date >= ymd('20200401') & Date < ymd('20201101')]
+
+# Data is from https://finance.yahoo.com/quote/AAPL/history/
+```
+
+
+```{r , message = FALSE}
+
+ggplot(apple_stock_closing, aes(x=Date, y=Close)) + geom_line() +
+  labs(title = "Apple Stock Closing Prices", 
+       x = "Date",
+       y = "Closing Prices") +
+  scale_x_date(date_breaks = "1 month") +
+  scale_y_continuous(labels=fancy_scientific) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r , message = FALSE, fig.width=18}
+
+ggplot(apple_stock_closing, aes(x=Close)) +
+  geom_histogram(aes(y=..density..), colour="lightgreen",fill='white', bins = 20)+ 
+  geom_density(alpha=.4, fill="#FF6666") +
+  labs(title = "Histograms of the Apple Stock Closing Price in Every Month", 
+       x = "Apple Stock Closing Price",
+       y = "Frequency") + scale_x_continuous(labels=fancy_scientific)+ scale_y_continuous(labels=fancy_scientific)   +
+  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  facet_grid(~month(Date))
+
+```
+
+```{r , message = FALSE}
+
+ggplot(apple_stock_closing, aes(x= as.factor(month(Date)), y = Close, fill=as.factor(month(Date)))) +
+  geom_boxplot(aes(group = month(Date))) +
+  labs(title = "Daily Data Boxplots of the Closing Price in Every Month", 
+       x = "Months",
+       y = "Closing Price") + 
+  theme(legend.position="none") + scale_y_continuous(labels=fancy_scientific) +
+  scale_fill_brewer(palette="Dark2")
+
+```
+
+```{r , message = FALSE}
+iphone <- fread("multiTimeline (1).csv", 
+                    select = c("Week", "iphone: (Turkey)"))[Week >= ymd('20200401') & Week < ymd('20201101')]
+setnames(iphone, "iphone: (Turkey)", "interest")
+
+ggplot(iphone, aes(x= as.factor(month(Week)), y = interest, fill=as.factor(month(Week)))) +
+  geom_boxplot(aes(group = month(Week))) +
+  labs(title = "Weekly Data Boxplots of the Interest over Search Term - iphone in Every Month", 
+       x = "Months",
+       y = "the Interest over Search Term - iphone") + 
+  theme(legend.position="none")  +
+  scale_fill_brewer(palette="Dark2")
+
+```
+# We have found a similar pattern !
+
+##  3) Delta Air Lines Stock Prices
+
+In this visualization, I wanted to use daily closing stock price data of Delta Air Lines
+
+**Setup Stage:**
+```{r , message = FALSE}
+delta_closing_price <- fread("DAL.csv", 
+                             select = c("Date", "Close"))[Date >= ymd('20200401') & Date < ymd('20201101')]
+
+# Data is from https://finance.yahoo.com/quote/DAL/history/
+```
+
+```{r , message = FALSE}
+
+ggplot(delta_closing_price, aes(x=Date, y=Close)) + geom_line() +
+  labs(title = "DAL Stock Closing Prices", 
+       x = "Date",
+       y = "Closing Prices") +
+  scale_x_date(date_breaks = "1 month") +
+  scale_y_continuous(labels=fancy_scientific) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r , message = FALSE, fig.width=18}
+
+ggplot(delta_closing_price, aes(x=Close)) +
+  geom_histogram(aes(y=..density..), colour="lightgreen",fill='white', bins = 20)+ 
+  geom_density(alpha=.4, fill="#FF6666") +
+  labs(title = "Histograms of the DAL Stock Closing Prices in Every Month", 
+       x = "DAL Stock Closing Price",
+       y = "Frequency") + scale_x_continuous(labels=fancy_scientific)+ scale_y_continuous(labels=fancy_scientific)   +
+  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  facet_grid(~month(Date))
+
+```
+
+```{r , message = FALSE}
+
+ggplot(delta_closing_price, aes(x= as.factor(month(Date)), y = Close, fill=as.factor(month(Date)))) +
+  geom_boxplot(aes(group = month(Date))) +
+  labs(title = "Daily Data Boxplots of the Closing Price in Every Month", 
+       x = "Months",
+       y = "Closing Price") + 
+  theme(legend.position="none") + scale_y_continuous(labels=fancy_scientific) +
+  scale_fill_brewer(palette="Dark2")
+
+```
+
+```{r , message = FALSE}
+uçak_biletleri <- fread("multiTimeline (2).csv", 
+                    select = c("Week", "uçak biletleri: (Turkey)"))[Week >= ymd('20200401') & Week < ymd('20201101')]
+setnames(uçak_biletleri, "uçak biletleri: (Turkey)", "interest")
+
+ggplot(uçak_biletleri, aes(x= as.factor(month(Week)), y = interest, fill=as.factor(month(Week)))) +
+  geom_boxplot(aes(group = month(Week))) +
+  labs(title = "Weekly Data Boxplots of the Interest over Search Term - uçak biletleri in Every Month", 
+       x = "Months",
+       y = "the Interest over Search Term - uçak biletleri") + 
+  theme(legend.position="none")  +
+  scale_fill_brewer(palette="Dark2")
+
+```
+
+
+##  References
+
+1-) https://github.com/owid/covid-19-data/tree/master/public/data \
+2-) https://finance.yahoo.com/quote/AAPL/history/ \
+3-) https://finance.yahoo.com/quote/DAL/history/
