@@ -72,9 +72,6 @@ autoplot(Acf(number_of_exported_seasonal,plot=FALSE))+
 
 
 
-
-
-
 ggseasonplot(number_of_employed_seasonal, year.labels=TRUE, year.labels.left=TRUE) +
   theme(plot.title = element_text(hjust = 0.5)) +  # to center the plot title
   ylab("Number of Employed People by Year") +
@@ -84,8 +81,8 @@ ggseasonplot(number_of_employed_seasonal, year.labels=TRUE, year.labels.left=TRU
 ggplot(number_of_employed, aes(x=data)) +
   geom_histogram(aes(y=..density..), colour="lightgreen",fill='white', bins = 50)+ 
   geom_density(alpha=.4, fill="#FF6666") +
-  labs(title = "Histograms of the Total Number of Covid Cases in Every Month", 
-       x = "Covid Cases",
+  labs(title = "Annually Distributions of Number of Employed People in Every Month", 
+       x = "Number of Employed People",
        y = "Frequency")  +
   scale_y_continuous()+
   
@@ -93,11 +90,66 @@ ggplot(number_of_employed, aes(x=data)) +
   facet_wrap(~year, ncol = 3)
 
 
-total_dataset = cbind(employed = number_of_employed$data, ipi = industrial_production_index$data,exported =number_of_exported$data)
+ggplot(industrial_production_index, aes(x=data)) +
+  geom_histogram(aes(y=..density..), colour="lightblue",fill='white', bins = 50)+ 
+  geom_density(alpha=.4, fill="#FF6666") +
+  labs(title = "Annually Distributions of IPI in Every Month", 
+       x = "IPI",
+       y = "Frequency")  +
+  scale_y_continuous()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  facet_wrap(~year, ncol = 3)
+
+
+ggplot(number_of_exported, aes(x=data)) +
+  geom_histogram(aes(y=..density..), colour="lightpink",fill='white', bins = 50)+ 
+  geom_density(alpha=.4, fill="#FF6666") +
+  labs(title = "Annually Distributions of Exported Goods in Every Month", 
+       x = "Number of Exported Goods",
+       y = "Frequency")  +
+  scale_y_continuous()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  facet_wrap(~year, ncol = 3)
+
+
+
+
+total_dataset <- cbind(employed = number_of_employed$data, 
+                            ipi = industrial_production_index$data,
+                            exported = number_of_exported$data)
+
 ggcorrplot(cor(total_dataset), hc.order = TRUE,
            lab = TRUE)
 
 
+
 print(cor.test(total_dataset[,'employed'], total_dataset[,'ipi']))
+
+total_dataset <- data.table(employed = number_of_employed$data, 
+                            ipi = industrial_production_index$data,
+                            exported = number_of_exported$data,
+                            date = number_of_exported$date)
+
+cor_emp_ipi <- total_dataset[,.(cor_emp_ipi = cor(employed, ipi)),by=year(date)]
+cor_emp_exp <- total_dataset[,.(cor_emp_exp = cor(employed, exported)),by=year(date)]
+cor_exp_ipi <- total_dataset[,.(cor_exp_ipi = cor(exported, ipi)),by=year(date)]
+
+ggplot(cor_emp_ipi, aes(x=year, y=cor_emp_ipi)) + 
+  geom_point(aes(size=cor_emp_ipi)) +
+  labs(title = "Annual Correlations Between Number of Employed and IPI", 
+       x = "Year",
+       y = "Correlation")
+
+ggplot(cor_emp_exp, aes(x=year, y=cor_emp_exp)) + 
+  geom_point(aes(size=cor_emp_exp)) +
+  labs(title = "Annual Correlations Between Number of Employed and Exported Goods", 
+       x = "Year",
+       y = "Correlation")
+
+ggplot(cor_exp_ipi, aes(x=year, y=cor_exp_ipi)) + 
+  geom_point(aes(size=cor_exp_ipi)) +
+  labs(title = "Annual Correlations Between Exported Goods and IPI", 
+       x = "Year",
+       y = "Correlation")
 
 

@@ -171,16 +171,18 @@ This high seasonality in these metrics can be also derived from the autocorrelat
 
 ## Correlation Analyses
 
+# Autocorrelation Function
+
 ```{r visualizations3, message = FALSE}
 
 autoplot(Acf(number_of_employed_seasonal,plot=FALSE))+
-  ggtitle("Autocorrelation Function of Fed Funds Rate")
+  ggtitle("Autocorrelation Function of Number of Employed")
 
 autoplot(Acf(industrial_production_index_seasonal,plot=FALSE))+
-  ggtitle("Autocorrelation Function of Fed Funds Rate")
+  ggtitle("Autocorrelation Function of IPI")
 
 autoplot(Acf(number_of_exported_seasonal,plot=FALSE))+
-  ggtitle("Autocorrelation Function of Fed Funds Rate")
+  ggtitle("Autocorrelation Function of Exported Goods")
 
 ```  
 
@@ -188,7 +190,10 @@ autoplot(Acf(number_of_exported_seasonal,plot=FALSE))+
 
 ```{r visualizations4, message = FALSE}
 
-total_dataset = cbind(employed = number_of_employed$data, ipi = industrial_production_index$data,exported =number_of_exported$data)
+total_dataset <- cbind(employed = number_of_employed$data, 
+                            ipi = industrial_production_index$data,
+                            exported = number_of_exported$data)
+
 ggcorrplot(cor(total_dataset), hc.order = TRUE,
            lab = TRUE)
 ```  
@@ -200,6 +205,48 @@ It seems like there is a relatively high correlation between the number of emplo
 print(cor.test(total_dataset[,'employed'], total_dataset[,'ipi']))
 
 ```  
+This super small p value shows we can reject the null hypothesis stating the correlation between these metrics is equal to 0.
+
+```{r corr_year1, message = FALSE}
+total_dataset <- data.table(employed = number_of_employed$data, 
+                            ipi = industrial_production_index$data,
+                            exported = number_of_exported$data,
+                            date = number_of_exported$date)
+
+cor_emp_ipi <- total_dataset[,.(cor_emp_ipi = cor(employed, ipi)),by=year(date)]
+cor_emp_exp <- total_dataset[,.(cor_emp_exp = cor(employed, exported)),by=year(date)]
+cor_exp_ipi <- total_dataset[,.(cor_exp_ipi = cor(exported, ipi)),by=year(date)]
+
+ggplot(cor_emp_ipi, aes(x=year, y=cor_emp_ipi)) + 
+  geom_point(aes(size=cor_emp_ipi)) +
+  labs(title = "Annual Correlations Between Number of Employed and IPI", 
+       x = "Year",
+       y = "Correlation")
+
+```  
+
+These correlations show a significant relationship between the number of employed and IPI, though values seem to be around 0 in year 2016 and 2018.
+
+```{r corr_year2, message = FALSE}
+ggplot(cor_emp_exp, aes(x=year, y=cor_emp_exp)) + 
+  geom_point(aes(size=cor_emp_exp)) +
+  labs(title = "Annual Correlations Between Number of Employed and Exported Goods", 
+       x = "Year",
+       y = "Correlation")
+``` 
+
+Although there is a relatively high positive correlation in 2017 and negative correlation in 2015, yearly correlations are found around zero between the number of employed people and exported goods. We can claim there is no significant relationship between these metrics.
+
+```{r corr_year3, message = FALSE}
+ggplot(cor_exp_ipi, aes(x=year, y=cor_exp_ipi)) + 
+  geom_point(aes(size=cor_exp_ipi)) +
+  labs(title = "Annual Correlations Between Exported Goods and IPI", 
+       x = "Year",
+       y = "Correlation")
+
+```  
+
+Year 2015 is apart, it is found that there is a positive correlation between exported goods and IPI. Especially after year 2016, all yearly correlations seem to exceed 0.75 indicating there is a strong relationship between exported goods and IPI.
 
 ## Conclusions and Remarks
 
