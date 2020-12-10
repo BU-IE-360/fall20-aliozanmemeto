@@ -1,0 +1,214 @@
+---
+title: "hw2"
+author: "Ali Ozan Memetoğlu"
+date: "12/6/2020"
+output: html_document
+---
+
+
+# A Time Series Analysis of Different Economy Related Metrics in Turkey
+
+## Introduction
+  Although a standard criteria for evaluating a country's level of economic development is mostly considered as income per capita, GDP per capita, there are many other evaluation metrics that can be considered, such as unemployment rate. Though unemployment is a general problem for the whole world, the degree of unemployment in Turkey has been especially high in respect to the other countries in the region at the same economic level. According to the [graph](https://www.statista.com/statistics/263708/unemployment-rate-in-turkey/) on the web page statista.com an upward trend in unemployment rate is obvious since 2012. So as to examine the effects of employment in Turkey on other economy related metrics, the dataset of total number of employed people in a month is used in this analysis.  
+  
+  
+  Employment is aside, production comes to the mind, as for another economy related topic. Although there has been many obsolete techniques used in agriculture, the agriculture production in Turkey has always been a strong and developing industry for the country. Thanks to the fertile and arable lands and favourable climate, different fruits and vegetables grow in different regions of Turkey, and most of the population in the rural areas earn their income from agriculture. To analyze the production, an important metric industrial production index is used in this study. According to the [investopedia.com](https://www.investopedia.com/terms/i/ipi.asp) the industrial production index (IPI) is defined as a monthly economic indicator measuring real output in the manufacturing, mining, electric, and gas industries, relative to a base year. Therefore, IPI is an important macroeconomic indicator especially for economists and investors.
+  
+  
+  Another important metric that is used in this analysis is total number of exported goods. Exports are incredibly important to modern economies because they offer people and firms many more markets for their goods. One of the core functions of diplomacy and foreign policy between governments is to foster economic trade, encouraging exports and imports for the benefit of all trading parties. 
+  
+  
+  As the metrics, the number of employed people, exported goods and IPI explained above; data manipulations, correlation and visual analysis will be conducted in this study. The time series data is provided by [Elektronik Veri Dağıtım Sistemi](https://evds2.tcmb.gov.tr/index.php?/evds/serieMarket). Because of the availability of data, monthly data from 2013 up to 2020, which is not included, is used. Main goal of this study is to answer if there are any correlations between these metrics and also to see any time series related property in the dataset.
+  
+  
+  
+**Setup Stage:**
+
+```{r setup, message = FALSE}
+
+library('data.table', quietly = TRUE)
+library('ggplot2', quietly = TRUE)
+library('dplyr')
+library('lubridate', quietly = TRUE)
+library('readxl')
+library('zoo')
+library ('fpp2')
+library('ggcorrplot')
+
+number_of_employed <- data.table(read_xlsx('/Users/aliozan.memetoglu/Downloads/İstihdam edilenler.xlsx'))[,c('Tarih', 'TP TIG03')]
+number_of_exported <- data.table(read_xlsx("/Users/aliozan.memetoglu/Downloads/Genel ticaret sistemine göre dış ticaret ekonomik faaliyetlere göre ihracat.xlsx"))[,c('Tarih','TP IHRISICREV4 TT')]
+industrial_production_index <- data.table(read_xlsx('/Users/aliozan.memetoglu/Downloads/Sanayi Üretim Endeksi.xlsx' ))[,c('Tarih', 'TP SANAYREV4 Y1')]
+
+
+```
+  
+## Manipulations
+  Initially, the xlsx file contains some extra parts: 'Notlar' and 'Seri Açıklamaları'. They create confusion after the data is read as if they are some sort of data points. What is more, date was in the form of (month, year). So some manipulations were necessary to handle these problems and filter the time range. Because date column is converted to better handled date format, date value appears as the first day of the month which actually indicates that month.
+  
+  
+```{r manipulations, message = FALSE}
+
+colname_filterdate <- function(someDT,old_colname,new_colname){
+  
+  setnames(someDT, 'Tarih', 'date')
+  someDT <- someDT %>% filter(grepl('-', date))
+  
+  setnames(someDT, old_colname, new_colname)
+  someDT[,date := as.Date(as.yearmon(date))]
+  someDT <- someDT[date >=  ymd(20130101) & date <  ymd(20200101) ]
+  
+  someDT$month <- format( someDT$date, "%m")
+  someDT$year <- format( someDT$date,"%Y")
+  someDT$day <- as.numeric( format(someDT$date, "%d"))
+  
+  # because there is no forecasting in this study, no further time tag extraction is applied
+  
+  someDT[,data:=as.numeric(data)]
+  return(someDT)
+}
+
+
+number_of_employed <- colname_filterdate(number_of_employed, 'TP TIG03', 'data')
+number_of_exported <- colname_filterdate(number_of_exported, 'TP IHRISICREV4 TT', 'data')
+industrial_production_index <- colname_filterdate(industrial_production_index, 'TP SANAYREV4 Y1', 'data')
+
+```  
+
+## Visualizations
+
+When we plot graphs, we can see a clear annual seasonal pattern in every graph in addition to an increasing trend. It is highly likely that all of these metrics show an seasonal pattern.
+
+```{r visualizations, message = FALSE}
+
+ggplot(number_of_employed, aes(x=date, y=data)) + geom_line()+
+  geom_smooth(method = "lm", color = 'lightgreen')+
+  ylim(23000, 30000)+
+  labs(title = "Monthly Number of Employed People over 2013-2019", 
+       x = "Number of Employed People",
+       y = "Month of Year") 
+
+ggplot(industrial_production_index, aes(x=date, y=data)) +
+  geom_line()+ geom_smooth(method = "lm", color = 'lightblue')+
+  ylim(50, 150)+
+  labs(title = "Monthly Industrial Production Index over 2013-2019", 
+       x = "IPI",
+       y = "Month of Year") 
+
+ggplot(number_of_exported, aes(x=date, y=data)) + 
+  geom_line() +
+  geom_smooth(method = "lm", color = 'lightpink') +
+  ylim(9900000, 17000000)+
+  labs(title = "Monthly Number of Exported Products over 2013-2019", 
+       x = "Number of Exported Products",
+       y = "Month of Year") 
+
+```  
+
+Then let's ggseasonplot() them!
+
+```{r visualizations2, message = FALSE}
+
+number_of_employed_seasonal <- ts(number_of_employed[,"data"],frequency=12, start=c(2013,1))
+industrial_production_index_seasonal <- ts(industrial_production_index[,"data"],frequency=12, start=c(2013,1))
+number_of_exported_seasonal <- ts(number_of_exported[,"data"],frequency=12, start=c(2013,1))
+
+ggseasonplot(number_of_employed_seasonal, year.labels=TRUE, year.labels.left=TRUE) +
+  theme(plot.title = element_text(hjust = 0.5)) +  # to center the plot title
+  ylab("Number of Employed People by Year") +
+  ggtitle("Monthly Number of Employed People over 2013-2019")
+
+ggseasonplot(industrial_production_index_seasonal, year.labels=TRUE, year.labels.left=TRUE) +
+  theme(plot.title = element_text(hjust = 0.5)) +  # to center the plot title
+  ylab("IPI by Year") +
+  ggtitle("Monthly Industrial Production Index over 2013-2019")
+
+ggseasonplot(number_of_exported_seasonal, year.labels=TRUE, year.labels.left=TRUE) +
+  theme(plot.title = element_text(hjust = 0.5)) +  # to center the plot title
+  ylab("Number of Exported Products by Year") +
+  ggtitle("Monthly Number of Exported Products over 2013-2019")
+
+```  
+
+```{r visualizations2.5, message = FALSE}
+
+ggplot(number_of_employed, aes(x=data)) +
+  geom_histogram(aes(y=..density..), colour="lightgreen",fill='white', bins = 50)+ 
+  geom_density(alpha=.4, fill="#FF6666") +
+  labs(title = "Annual Distributions of Number of Employed People in Every Month", 
+       x = "Number of Employed People",
+       y = "Frequency")  +
+  scale_y_continuous()+
+  
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  facet_wrap(~year, ncol = 3)
+
+
+ggplot(industrial_production_index, aes(x=data)) +
+  geom_histogram(aes(y=..density..), colour="lightblue",fill='white', bins = 50)+ 
+  geom_density(alpha=.4, fill="#FF6666") +
+  labs(title = "Annual Distributions of IPI in Every Month", 
+       x = "IPI",
+       y = "Frequency")  +
+  scale_y_continuous()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  facet_wrap(~year, ncol = 3)
+
+
+ggplot(number_of_exported, aes(x=data)) +
+  geom_histogram(aes(y=..density..), colour="lightpink",fill='white', bins = 50)+ 
+  geom_density(alpha=.4, fill="#FF6666") +
+  labs(title = "Annual Distributions of Exported Goods in Every Month", 
+       x = "Number of Exported Goods",
+       y = "Frequency")  +
+  scale_y_continuous()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  facet_wrap(~year, ncol = 3)
+
+```  
+
+
+This high seasonality in these metrics can be also derived from the autocorrelation in time series data. If we plot the autocorrelation functions, there must high values at lag 12, indicating this seasonality.
+
+## Correlation Analyses
+
+```{r visualizations3, message = FALSE}
+
+autoplot(Acf(number_of_employed_seasonal,plot=FALSE))+
+  ggtitle("Autocorrelation Function of Fed Funds Rate")
+
+autoplot(Acf(industrial_production_index_seasonal,plot=FALSE))+
+  ggtitle("Autocorrelation Function of Fed Funds Rate")
+
+autoplot(Acf(number_of_exported_seasonal,plot=FALSE))+
+  ggtitle("Autocorrelation Function of Fed Funds Rate")
+
+```  
+
+
+
+```{r visualizations4, message = FALSE}
+
+total_dataset = cbind(employed = number_of_employed$data, ipi = industrial_production_index$data,exported =number_of_exported$data)
+ggcorrplot(cor(total_dataset), hc.order = TRUE,
+           lab = TRUE)
+```  
+
+It seems like there is a relatively high correlation between the number of employed people and ipi in the dataset. 
+
+```{r test, message = FALSE}
+
+print(cor.test(total_dataset[,'employed'], total_dataset[,'ipi']))
+
+```  
+
+## Conclusions and Remarks
+
+In this study, the correlation between these metrics and some time series related properties are examined. In the time series part, we have seen a clear upward trend and an annual seasonal pattern in the all metrics without further analysis, which is also derived from autocorrelation graphs. In the correlation analysis part, we found a high correlation between the number of employed people and ipi and relatively high correlation between ipi and exported goods. There is no significant correlation seen between the number of employed people and exported goods.
+
+
+##  References
+- https://evds2.tcmb.gov.tr/
+- https://www.statista.com/statistics/263708/unemployment-rate-in-turkey/
+- https://www.investopedia.com/terms/i/ipi.asp
+
+
