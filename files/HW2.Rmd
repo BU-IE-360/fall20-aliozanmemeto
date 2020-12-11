@@ -104,7 +104,6 @@ ggplot(number_of_exported, aes(x=date, y=data)) +
 
 ```  
 
-Then let's ggseasonplot() them!
 
 ```{r visualizations2, message = FALSE}
 
