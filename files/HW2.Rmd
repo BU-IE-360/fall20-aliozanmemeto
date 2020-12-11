@@ -129,6 +129,8 @@ ggseasonplot(number_of_exported_seasonal, year.labels=TRUE, year.labels.left=TRU
 
 ```  
 
+We can see that while the seasonality effect is dominant in some years, such as 2013, 2014, 2018 and 2019 for the number of exported products, it is not really effective in others. Additionally, it can be asserted that the seasonality is more effective spread over all years in some metrics like number of employed people. It would be good to see distributions at this point.
+
 ```{r visualizations2.5, message = FALSE}
 
 ggplot(number_of_employed, aes(x=data)) +
@@ -250,7 +252,7 @@ Year 2015 is apart, it is found that there is a positive correlation between exp
 
 ## Conclusions and Remarks
 
-In this study, the correlation between these metrics and some time series related properties are examined. In the time series part, we have seen a clear upward trend and an annual seasonal pattern in the all metrics without further analysis, which is also derived from autocorrelation graphs. In the correlation analysis part, we found a high correlation between the number of employed people and ipi and relatively high correlation between ipi and exported goods. There is no significant correlation seen between the number of employed people and exported goods.
+In this study, the correlation between these metrics and some time series related properties are examined. In the time series part, we have seen a clear upward trend and an annual seasonal pattern in the all metrics without further analysis, which is also derived from autocorrelation graphs. In the correlation analysis part, we found a high correlation between the number of employed people and ipi and relatively high correlation between ipi and exported goods. There is no significant correlation seen between the number of employed people and exported goods. Another comment we can make on is that although the total correlation between the ipi and exported goods is around 0.6, when we check the yearly correlations after 2016, they are around 0.8 and the correlation in 2015 is almost 0.
 
 
 ##  References
