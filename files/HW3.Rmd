@@ -1,0 +1,236 @@
+---
+title: "HW3"
+author: "Ali Ozan Memetoğlu"
+date: "1/9/2021"
+output: html_document
+---
+
+# Time Series Regression for Predicting Food and Nonalcoholic Beverage Price Index
+
+## Introduction
+
+|   The main objective of this study is to forecast the price index of food and nonalcoholic beverages in Turkey using the data from [Elektronik Veri Dağıtım Sistemi](https://evds2.tcmb.gov.tr/) with time series regression. Both relevant predictors and our target variable price index is taken from the same source. Monthly data is from 2012 January to 2020 December.
+
+|   As relevant predictors:
++ Consumer Confidence Index - CCI
++ US Dollar Buying Exchange Rate - USD
++ Personal Loan Interest Rate - IR
+
+are used. According to [investment.com](). CCI is defined as:
+*"... a measure that examines the weighted average of prices of a basket of consumer goods and services, such as transportation, food, and medical care. It is calculated by taking price changes for each item in the predetermined basket of goods and averaging them. Changes in the CPI are used to assess price changes associated with the cost of living."*
+which is thought to be a good predictor for price index, since it explains price changes well.
+There is no doubt that exchange rate will explain price and interest rate will also show somehow a relation with price index because in general, when interest rates are low, the economy grows and inflation increases.
+
+## Manipulation
+```{r setup, message = FALSE}
+library('data.table', quietly = TRUE)
+library('ggplot2', quietly = TRUE)
+library('dplyr')
+library('lubridate', quietly = TRUE)
+library('readxl')
+library('zoo')
+library ('fpp2')
+library('corrplot')
+df <- data.table(read_xlsx('/Users/aliozan.memetoglu/Downloads/EVDS (1).xlsx'))[,c('Date', 'TP DK USD A YTL','TP KTF10', 'TP FG J01', 'TP TG2 Y01')]
+```
+The file contains some extra parts. So a simple manipulator is introduced to convert date to a usable type. This manipulator is nothing but a cleaner for the file. It might be useful when new data is obtained for performance check, new data can be transformed just by changing the date part in the function.
+
+```{r simp_man, message = FALSE}
+simple_manipulator <- function(someDT){
+  
+  someDT <- someDT %>% filter(grepl('-', Date))
+  someDT[,Date := as.Date(as.yearmon(Date))]
+  someDT <- someDT[Date >=  ymd(20120101) & Date <=  ymd(20201201) ]
+  setnames(someDT, 'TP DK USD A YTL', 'USD')
+  setnames(someDT, 'TP KTF10', 'IR')
+  setnames(someDT, 'TP TG2 Y01', 'CCI')
+  setnames(someDT, 'TP FG J01', 'CPI')
+  return(someDT)
+}
+df <- simple_manipulator(df)
+summary(df)
+```
+
+It is really not known that USD and IR predictors and in char type.
+
+```{r as_double, message = FALSE}
+df[,USD := as.double(USD)]
+df[,IR := as.double(IR)]
+summary(df)
+```
+## Visualization
+Both target, predictors and their correlations are observed before a ts object is created.
+
+```{r plot, message = FALSE}
+ggplot(df, aes(x=Date, y=CPI)) + geom_line()+
+  geom_smooth(method = "lm", color = 'lightgreen')+
+  labs(title = "Monthly CPI over 2012-2020", 
+       x = "Month",
+       y = "CPI") 
+
+ggplot(df, aes(x=Date, y=CCI)) + geom_line()+
+  geom_smooth(method = "lm", color = 'lightpink')+
+  labs(title = "Monthly CCI over 2012-2020", 
+       x = "Month",
+       y = "CCI") 
+
+ggplot(df, aes(x=Date, y=IR)) + geom_line()+
+  geom_smooth(method = "lm", color = 'lightblue')+
+  labs(title = "Monthly IR over 2012-2020", 
+       x = "Month",
+       y = "IR") 
+
+ggplot(df, aes(x=Date, y=USD)) + geom_line()+
+  geom_smooth(method = "lm", color = 'lightyellow')+
+  labs(title = "Monthly USD over 2012-2020", 
+       x = "Month",
+       y = "USD") 
+
+
+corrplot(cor(df[,-1]), method= "number")
+
+```
+
+There are some remarks we can make at this point. Referring to the definition of CCI above, as CPI increases, purchasing power of consumers decreases intuitively. A for seasonality, while there is significant seasonality effect observed in predictors, there is somehow a seasonality effect in our target CPI. There is an increase at first years and then a positive quadratic like shape except for 2018. The reason for 2018 is probably due to the presidential election in 2018. And also, variance of price index increases a little bit we can fix this by taking log. The most correlated one with target seems like USD. The log of USD can be put into model to account for this if target's log is going to be considered. When correlations are considered, there is a strong positive correlation between CPI and USD and negative between CPI and CCI. Multicollinearity between USD and CCI might be a problem but this is due to the high correlation between CPI and USD. 
+
+```{r plot_2, message = FALSE}
+
+ggplot(df, aes(x=Date, y=log(CPI))) + geom_line()+
+  geom_smooth(method = "lm", color = 'lightgreen')+
+  labs(title = "Monthly CPI over 2012-2020", 
+       x = "Month",
+       y = "CPI") 
+
+```
+
+## Analysis
+
+Some models are created below.
+
+```{r model_1, message = FALSE}
+df_log <- df
+df_log[,CPI := log(CPI)]
+df_log[,USD := log(USD)]
+
+fit1=lm( CPI ~ USD + CCI + IR, df_log)
+summary(fit1)
+
+fit2=lm( CPI ~ USD + CCI, df_log)
+summary(fit2)
+
+fit3=lm( CPI ~ USD + IR, df_log)
+summary(fit3)
+
+fit4=lm( CPI ~ USD, df_log)
+summary(fit4)
+
+```
+It can be seen that the negative effect of CCI was not really helpful probably due to collinearity. IR and USD model can be used but because most of the variation is explained by USD and later some additional seasonal effects will be introduced, it should be sufficient to use USD only. Now let's introduce the trend variable.
+
+
+```{r trend_model, message = FALSE}
+df_log[,trend:=1:.N]
+fit5=lm( CPI ~ trend, df_log)
+summary(fit5)
+checkresiduals(fit5)
+```
+From the summary stats, trend component explains variation in target very well. But when residuals of model are checked, both constant variation and zero mean assumptions are violated. Autocorrelation function of residuals also confirms this circumstance.
+
+```{r trend_model_2, message = FALSE}
+fitted_res = data.table(residuals = residuals(fit5),fitted = fitted(fit5))
+ggplot(fitted_res, aes(x = fitted, y = residuals)) +
+  geom_point()
+```
+We can see the strong autocorrelation among residuals from fited residual plot, they are not scattered well. This can be fixed when the USD variable is used, it might also explain the seasonality effect.
+
+```{r model_strong_1, message = FALSE}
+fit6=lm( CPI ~ trend + USD, df_log)
+summary(fit6)
+checkresiduals(fit6)
+
+fitted_res = data.table(residuals = residuals(fit6),fitted = fitted(fit6))
+ggplot(fitted_res, aes(x = fitted, y = residuals)) +
+  geom_point()
+```
+We still could not fix the problem at lag 1, 2 and 3 even though USD variable is introduced. And also we have a problem at lag 12, so USD could not account for the seasonality effect either.
+
+```{r model_strong_2, message = FALSE}
+month <- seq(1,12,by=1)
+df_log <- cbind(df_log, month)
+df_log[,month:=as.factor(month)]
+
+fit7=lm( CPI ~ trend + USD + month, df_log)
+summary(fit7)
+checkresiduals(fit7)
+
+fitted_res = data.table(residuals = residuals(fit7),fitted = fitted(fit7))
+ggplot(fitted_res, aes(x = fitted, y = residuals)) +
+  geom_point()
+```
+
+We still could not fix the problem at lag 1, 2 and 3! This is probably due to the price changes in seasons. We can add a season predictor. But in our case, seasonal effect is significant especially in summer period, probably since weather conditions are more favorable for nonalcoholic beverages and food. And we have an outlier at 79th data point that is clear without any percentage process used. That's actually the month election happened! Instead of removing it, a new variable is prefered because it will be hard to model if it is removed. The mean of the two day and the day before election and after election is used for that day.
+
+```{r model_strong_3, message = FALSE}
+
+season <- c(rep(1,2),rep(2,3), rep(3,3), rep(4,3), 1)
+df_log <- cbind(df_log, season)
+df_log[,season:=as.factor(season)]
+
+df_log[79, 'CPI'] = mean(df_log[80, CPI],df_log[81, CPI],df_log[78, CPI], df_log[77, CPI] )
+
+fit8=lm( CPI ~ trend + USD + month + season, df_log)
+summary(fit8)
+checkresiduals(fit8)
+
+fitted_res = data.table(residuals = residuals(fit8),fitted = fitted(fit8))
+ggplot(fitted_res, aes(x = fitted, y = residuals)) +
+  geom_point()
+```
+
+Because we still have this autoregression problem, we can append lag 1 residuals to the model or lag 1 values. 
+
+```{r model_strong_4, message = FALSE}
+
+df_log[,res_lag1 := lag(residuals(fit8),1)]
+fit9=lm( CPI ~ trend + USD + month + season + res_lag1, df_log)
+
+
+summary(fit9)
+checkresiduals(fit9)
+
+fitted_res = data.table(residuals = residuals(fit9),fitted = fitted(fit9))
+ggplot(fitted_res, aes(x = fitted, y = residuals)) +
+  geom_point()
+
+```
+
+There could be some other techniques to account for these outlier, especially for the election day. It seems like we could not really solve the problem. Our model seems to work fine anyway. Although R squared value decreased a little bit when we introduced lag 1 predictor, probably because already includes the variablity explained before and it is like an additional column, the error has decreased a lot.
+
+
+## Forecasting
+
+In analysis part, last month is used but it is expected to forecast the last month value. So the same last modeling approach is going to be used to forecast the last month using the previous data. Before the forecasting, the predicted and actual values are visualized first.
+
+```{r visual, message = FALSE}
+visual_df = data.table(actual = df_log[2:108,CPI], predicted = fitted(fit9), trend = 1:107)
+ggplot()+
+  geom_line(data = visual_df, aes(x=trend, y=actual, color = 'orange'))+
+  geom_line(data = visual_df, aes(x=trend, y=predicted, color = 'blue'))
+
+```
+
+The last actual value should be removed in order to perform the forecasting. Residual does not necessarily need to be removed because it is the residual of the day before.
+
+```{r predict, message = FALSE}
+fit_final=lm( CPI ~ trend + USD + month + season + res_lag1, df_log[1:107])
+dec_2020 <- df_log[108]
+dec_2020[,'CPI'] = NA
+predict(fit_final, dec_2020)
+df_log[108]
+```
+
+# Conclusions and Remarks
+The model could be improved with additional outlier analysis and some additional predictors related to price index could be used. What is more, forecasting period could be longer and some performance metrics such as Root Mean Squared Error or Mean Absolute Error could be used for a longer test period.
+There are many other variables effecting Consumer Price Index that could be observed and analyzed.
+For a better forecasting, events in Turkey that effect price indeces could have been examined more because many unstable events occur frequently in Turkey. 
+To sum up, price index in Turkey can be modeled with a time series regression and USD exchange rate variable can be used. It is probably because most of our goods are imported from another country.
