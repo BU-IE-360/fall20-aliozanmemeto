@@ -221,7 +221,7 @@ ggplot()+
 
 The last actual value should be removed in order to perform the forecasting. Residual does not necessarily need to be removed because it is the residual of the day before.
 
-```{r predict, message = FALSE}
+```{r predict, message = FALSE, warning = FALSE}
 fit_final=lm( CPI ~ trend + USD + month + season + res_lag1, df_log[1:107])
 dec_2020 <- df_log[108]
 dec_2020[,'CPI'] = NA
