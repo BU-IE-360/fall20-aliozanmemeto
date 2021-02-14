@@ -22,5 +22,5 @@
 
 ## Final (14/02/2021)
 
-4- [Here](Final-Exam---Ali-Ozan-Memetoglu (2).html) is my Final Exam Hourly Solar Power Plant Analysis.
+4- [Here](files/Final-Exam---Ali-Ozan-Memetoglu (2).html) is my Final Exam Hourly Solar Power Plant Analysis.
 
