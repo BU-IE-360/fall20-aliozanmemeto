@@ -19,3 +19,8 @@
 ## Homework 4 (25/01/2021)
 
 4- [Here](files/HW4.html) is my HW4 "Stationarity of Turkish Electricity Consumption Data".
+
+## Final (14/02/2021)
+
+4- [Here](Final-Exam---Ali-Ozan-Memetoglu (2).html) is my Final Exam Hourly Solar Power Plant Analysis.
+
