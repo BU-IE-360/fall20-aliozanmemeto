@@ -26,4 +26,4 @@
 
 ## Project 
 
-7- [Here](https://bu-ie-360.github.io/fall20-aliozanmemeto/files/IE360_Project_Report (1).html) is our report for the project.
+7- [Here](https://bu-ie-360.github.io/fall20-aliozanmemeto/files/IE360_Project_Report.html) is our report for the project.
