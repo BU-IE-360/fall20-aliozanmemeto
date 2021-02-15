@@ -24,3 +24,6 @@
 
 4- [Here](files/Final-Exam---Ali-Ozan-Memetoglu (2).html) is my Final Exam Hourly Solar Power Plant Analysis.  Correction : Time Series Regression with PCA gives better results without scaling and centering
 
+## Project 
+
+[Here](https://bu-ie-360.github.io/fall20-aliozanmemeto/project/IE360_Project_Report.html(1)) is our report for the project.
