@@ -22,5 +22,5 @@
 
 ## Final (14/02/2021)
 
-4- [Here](files/Final-Exam---Ali-Ozan-Memetoglu (2).html) is my Final Exam Hourly Solar Power Plant Analysis.
+4- [Here](files/Final-Exam---Ali-Ozan-Memetoglu (2).html) is my Final Exam Hourly Solar Power Plant Analysis.  Correction : Time Series Regressionwith PCA gives better results without scaling and centering
 
