@@ -18,12 +18,12 @@
 
 ## Homework 4 (25/01/2021)
 
-4- [Here](files/HW4.html) is my HW4 "Stationarity of Turkish Electricity Consumption Data".
+5- [Here](files/HW4.html) is my HW4 "Stationarity of Turkish Electricity Consumption Data".
 
 ## Final (14/02/2021)
 
-4- [Here](files/Final-Exam---Ali-Ozan-Memetoglu (2).html) is my Final Exam Hourly Solar Power Plant Analysis.  Correction : Time Series Regression with PCA gives better results without scaling and centering
+6- [Here](files/Final-Exam---Ali-Ozan-Memetoglu (2).html) is my Final Exam Hourly Solar Power Plant Analysis.  Correction : Time Series Regression with PCA gives better results without scaling and centering
 
 ## Project 
 
-[Here](https://bu-ie-360.github.io/fall20-aliozanmemeto/files/IE360_Project_Report (1).html) is our report for the project.
+7- [Here](https://bu-ie-360.github.io/fall20-aliozanmemeto/files/IE360_Project_Report (1).html) is our report for the project.
